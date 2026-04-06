@@ -1,5 +1,6 @@
 // ============================================================
-// BATALHA DA GRAMÁTICA — script.js (cliente)
+// BATALHA DO SABER — script.js (cliente)
+// Versão expandida: múltiplas matérias + seletor visual
 // ============================================================
 
 // ---- EMOJIS DISPONÍVEIS ----
@@ -10,28 +11,47 @@ const EMOJIS = [
   '🍎','🎸','🎵','🌙','☀️','❄️','🌺','🍀','🦊','🎩'
 ];
 
-// ---- LETRAS DAS OPÇÕES ----
 const LETRAS = ['A', 'B', 'C', 'D'];
 
-// ---- NOMES PROIBIDOS ----
 const NOMES_PROIBIDOS = [
-  'eipstein', 'eipsten', 'diddy', 'p.diddy', 'p diddy',
-  'adolf', 'hitler', 'adolf hitler'
+  'eipstein','eipsten','diddy','p.diddy','p diddy','adolf','hitler','adolf hitler'
 ];
 
-// ---- SENHA DO PROFESSOR ----
 const SENHA_PROFESSOR = '2054';
 
+// ---- Mapeamento de matérias ----
+const MATERIA_NOMES = {
+  portugues:  '📖 Português',
+  matematica: '🔢 Matemática',
+  geometria:  '📐 Geometria',
+  geografia:  '🌍 Geografia',
+  ciencias:   '🔬 Ciências',
+  historia:   '🏛️ História',
+  ingles:     '🇬🇧 Inglês',
+  aleatorio:  '🎲 Aleatório'
+};
+
+const MATERIA_CORES = {
+  portugues:  '#7c3aed',
+  matematica: '#0891b2',
+  geometria:  '#059669',
+  geografia:  '#16a34a',
+  ciencias:   '#d97706',
+  historia:   '#dc2626',
+  ingles:     '#2563eb',
+  aleatorio:  '#db2777'
+};
+
 // ---- ESTADO LOCAL ----
-let meuId = null;
-let meuNome = '';
-let meuEmoji = '';
-let emojiSelecionado = '';
-let timerLocal = null;
-let segundosRestantes = 10;
-let jaRespondeu = false;
-let totalJogadoresAtual = 0;
-let respondeuAudio = false;
+let meuId               = null;
+let meuNome             = '';
+let meuEmoji            = '';
+let emojiSelecionado    = '';
+let materiaSelecionada  = 'portugues';
+let timerLocal          = null;
+let segundosRestantes   = 10;
+let jaRespondeu         = false;
+let respondeuAudio      = false;
 let modoProfsDesbloqueado = false;
 
 // ---- CONTEXTO DE ÁUDIO ----
@@ -41,59 +61,52 @@ function getAudio() {
   return audioCtx;
 }
 
-// ---- SOM SINTÉTICO ----
 function tocarSom(tipo) {
   try {
-    const ctx = getAudio();
-    const osc = ctx.createOscillator();
+    const ctx  = getAudio();
+    const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    osc.connect(gain); gain.connect(ctx.destination);
 
-    if (tipo === 'acerto') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(523, ctx.currentTime);
-      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
-      osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
-    } else if (tipo === 'erro') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(200, ctx.currentTime);
-      osc.frequency.setValueAtTime(100, ctx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
-    } else if (tipo === 'tick') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(800, ctx.currentTime);
-      gain.gain.setValueAtTime(0.05, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.05);
-    } else if (tipo === 'inicio') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      osc.frequency.setValueAtTime(550, ctx.currentTime + 0.15);
-      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.6);
-    } else if (tipo === 'fim') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(784, ctx.currentTime);
-      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.2);
-      osc.frequency.setValueAtTime(523, ctx.currentTime + 0.4);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.8);
-    }
-  } catch (e) { /* áudio pode falhar silenciosamente */ }
+    const cfg = {
+      acerto: () => {
+        osc.type = 'sine';
+        [523,659,784].forEach((f,i) => osc.frequency.setValueAtTime(f, ctx.currentTime + i*.1));
+        gain.gain.setValueAtTime(.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .5);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + .5);
+      },
+      erro: () => {
+        osc.type = 'sawtooth';
+        [200,100].forEach((f,i) => osc.frequency.setValueAtTime(f, ctx.currentTime + i*.15));
+        gain.gain.setValueAtTime(.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .3);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + .3);
+      },
+      tick: () => {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        gain.gain.setValueAtTime(.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .05);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + .05);
+      },
+      inicio: () => {
+        osc.type = 'sine';
+        [440,550,660].forEach((f,i) => osc.frequency.setValueAtTime(f, ctx.currentTime + i*.15));
+        gain.gain.setValueAtTime(.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .6);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + .6);
+      },
+      fim: () => {
+        osc.type = 'sine';
+        [784,659,523].forEach((f,i) => osc.frequency.setValueAtTime(f, ctx.currentTime + i*.2));
+        gain.gain.setValueAtTime(.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .8);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + .8);
+      }
+    };
+    cfg[tipo]?.();
+  } catch(e) {}
 }
 
 // ============================================================
@@ -101,139 +114,111 @@ function tocarSom(tipo) {
 // ============================================================
 const socket = io();
 
-// ---- ESTADO ATUAL ----
-socket.on('estado_atual', ({ fase, ranking, nivel, totalRodadas }) => {
-  if (fase === 'resultado') {
-    mostrarTela('resultado');
-    renderizarResultadoFinal(ranking);
-  }
+socket.on('estado_atual', ({ fase, ranking, nivel, materia, totalRodadas }) => {
+  if (fase === 'resultado') { mostrarTela('resultado'); renderizarResultadoFinal(ranking); }
   renderizarLobby(ranking);
 });
 
-// ---- ATUALIZAR LOBBY ----
 socket.on('atualizar_lobby', ({ jogadores, mensagem }) => {
   renderizarLobby(jogadores);
   mostrarMsgLobby(mensagem);
 });
 
-// ---- JOGO INICIADO ----
-socket.on('jogo_iniciado', ({ nivel, totalRodadas }) => {
+socket.on('jogo_iniciado', ({ nivel, totalRodadas, materia }) => {
   mostrarTela('jogo');
   tocarSom('inicio');
 
   const nivelNomes = { '4ano':'4º Ano','5ano':'5º Ano','6ano':'6º Ano','7ano':'7º Ano','8ano':'8º Ano','9ano':'9º Ano' };
   document.getElementById('nivel-badge').textContent = nivelNomes[nivel] || nivel;
+  atualizarBadgeMateria(materia);
   document.getElementById('meu-emoji-header').textContent = meuEmoji || '👤';
-  document.getElementById('meu-nome-header').textContent = meuNome || 'Jogador';
+  document.getElementById('meu-nome-header').textContent  = meuNome  || 'Jogador';
 
-  // Mostrar botão próxima pergunta só se for professor
-  const btnProxima = document.getElementById('btn-proxima-pergunta');
-  if (btnProxima) btnProxima.style.display = modoProfsDesbloqueado ? 'block' : 'none';
+  const btn = document.getElementById('btn-proxima-pergunta');
+  if (btn) btn.style.display = modoProfsDesbloqueado ? 'block' : 'none';
 });
 
-// ---- NOVA PERGUNTA ----
-socket.on('nova_pergunta', ({ pergunta, opcoes, tipo, rodada, totalRodadas, tempo }) => {
-  jaRespondeu = false;
-  respondeuAudio = false;
+socket.on('nova_pergunta', ({ pergunta, opcoes, tipo, rodada, totalRodadas, tempo, materia }) => {
+  jaRespondeu = false; respondeuAudio = false;
 
   document.getElementById('rodada-info').textContent = `Rodada ${rodada}/${totalRodadas}`;
   document.getElementById('progresso-fill').style.width = '0%';
   document.getElementById('responderam-label').textContent = '0 responderam';
 
-  // Habilitar botão próxima pergunta para professor
-  const btnProxima = document.getElementById('btn-proxima-pergunta');
-  if (btnProxima && modoProfsDesbloqueado) {
-    btnProxima.disabled = false;
-    btnProxima.textContent = '⏭️ Próxima Pergunta';
-  }
+  atualizarBadgeMateria(materia);
+
+  const btn = document.getElementById('btn-proxima-pergunta');
+  if (btn && modoProfsDesbloqueado) { btn.disabled = false; btn.textContent = '⏭️ Próxima Pergunta'; }
 
   renderizarPergunta(pergunta, opcoes, tipo);
   iniciarTimer(tempo);
   esconderFeedback();
 });
 
-// ---- PROGRESSO DAS RESPOSTAS ----
 socket.on('progresso_respostas', ({ responderam, total }) => {
-  totalJogadoresAtual = total;
   const pct = total > 0 ? (responderam / total) * 100 : 0;
   document.getElementById('progresso-fill').style.width = pct + '%';
   document.getElementById('responderam-label').textContent = `${responderam} de ${total} responderam`;
 });
 
-// ---- FEEDBACK INDIVIDUAL ----
 socket.on('feedback_resposta', ({ correta, resposta }) => {
   mostrarFeedback(correta);
-  if (!respondeuAudio) {
-    tocarSom(correta ? 'acerto' : 'erro');
-    respondeuAudio = true;
-  }
-  const botoes = document.querySelectorAll('.opcao-btn');
-  botoes.forEach((btn, i) => {
+  if (!respondeuAudio) { tocarSom(correta ? 'acerto' : 'erro'); respondeuAudio = true; }
+  document.querySelectorAll('.opcao-btn').forEach((btn, i) => {
     btn.disabled = true;
-    if (i === resposta) {
-      btn.classList.add(correta ? 'correta' : 'errada');
-    }
+    if (i === resposta) btn.classList.add(correta ? 'correta' : 'errada');
   });
 });
 
-// ---- FIM DA RODADA ----
 socket.on('fim_rodada', ({ respostaCorreta, respostas, primeiroAcertou, ranking }) => {
-  pararTimer();
-  esconderFeedback();
-
-  const botoes = document.querySelectorAll('.opcao-btn');
-  botoes.forEach((btn, i) => {
+  pararTimer(); esconderFeedback();
+  document.querySelectorAll('.opcao-btn').forEach((btn, i) => {
     btn.disabled = true;
-    if (i === respostaCorreta) btn.classList.add('correta');
-    else btn.classList.add('errada');
+    btn.classList.add(i === respostaCorreta ? 'correta' : 'errada');
   });
-
   renderizarRankingLateral(ranking);
-
   const eu = ranking.find(j => j.id === socket.id);
-  if (eu) {
-    document.getElementById('meus-pontos-header').textContent = eu.pontos + ' pts';
-  }
-
-  if (primeiroAcertou === socket.id) {
-    mostrarBadgeRapido();
-  }
-
-  // Habilitar botão próxima pergunta após fim da rodada
-  const btnProxima = document.getElementById('btn-proxima-pergunta');
-  if (btnProxima && modoProfsDesbloqueado) {
-    btnProxima.disabled = false;
-    btnProxima.textContent = '⏭️ Próxima Pergunta';
-  }
+  if (eu) document.getElementById('meus-pontos-header').textContent = eu.pontos + ' pts';
+  if (primeiroAcertou === socket.id) mostrarBadgeRapido();
+  const btn = document.getElementById('btn-proxima-pergunta');
+  if (btn && modoProfsDesbloqueado) { btn.disabled = false; btn.textContent = '⏭️ Próxima Pergunta'; }
 });
 
-// ---- FIM DO JOGO ----
 socket.on('fim_jogo', ({ ranking }) => {
   tocarSom('fim');
-  setTimeout(() => {
-    mostrarTela('resultado');
-    renderizarResultadoFinal(ranking);
-  }, 500);
+  setTimeout(() => { mostrarTela('resultado'); renderizarResultadoFinal(ranking); }, 500);
 });
 
-// ---- JOGO RESETADO ----
 socket.on('jogo_resetado', ({ ranking }) => {
-  mostrarTela('lobby');
-  renderizarLobby(ranking);
+  mostrarTela('lobby'); renderizarLobby(ranking);
   mostrarMsgLobby('🔄 Jogo resetado! Aguardando o professor iniciar.');
 });
 
+socket.on('connect', () => { meuId = socket.id; });
+
 // ============================================================
-// FUNÇÕES DE UI
+// UI
 // ============================================================
 
-// ---- VERIFICAR NOME PROIBIDO ----
-function nomeProbido(nome) {
-  const nomeLower = nome.toLowerCase().trim();
-  return NOMES_PROIBIDOS.some(proibido => nomeLower === proibido || nomeLower.includes(proibido));
+function atualizarBadgeMateria(materia) {
+  const badge = document.getElementById('materia-badge');
+  if (!badge || !materia) return;
+  badge.textContent = MATERIA_NOMES[materia] || materia;
+  const cor = MATERIA_CORES[materia] || '#7c3aed';
+  badge.style.background = `linear-gradient(135deg, ${cor}, ${cor}aa)`;
 }
 
-// ---- INICIALIZAR EMOJIS ----
+function selecionarMateria(btn) {
+  document.querySelectorAll('.btn-materia').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  materiaSelecionada = btn.dataset.materia;
+}
+
+function nomeProbido(nome) {
+  const n = nome.toLowerCase().trim();
+  return NOMES_PROIBIDOS.some(p => n === p || n.includes(p));
+}
+
 function inicializarEmojis() {
   const grid = document.getElementById('emoji-grid');
   grid.innerHTML = '';
@@ -253,353 +238,221 @@ function selecionarEmoji(emoji, btn) {
   document.getElementById('emoji-preview').textContent = `Selecionado: ${emoji}`;
 }
 
-// ---- ENTRAR NO LOBBY ----
 function entrarNoLobby() {
   const nome = document.getElementById('input-nome').value.trim();
   if (!nome) { pulsarErro('input-nome'); return; }
   if (!emojiSelecionado) { alert('Selecione um emoji!'); return; }
+  if (nomeProbido(nome)) { mostrarAvisoNomeProibido(); pulsarErro('input-nome'); return; }
 
-  // Verificar nome proibido
-  if (nomeProbido(nome)) {
-    mostrarAvisoNomeProibido();
-    pulsarErro('input-nome');
-    return;
-  }
-
-  meuNome = nome;
-  meuEmoji = emojiSelecionado;
-
+  meuNome = nome; meuEmoji = emojiSelecionado;
   socket.emit('entrar_lobby', { nome, emoji: emojiSelecionado });
 
   document.getElementById('btn-entrar').textContent = '✅ Você entrou!';
   document.getElementById('btn-entrar').disabled = true;
-  document.getElementById('input-nome').disabled = true;
+  document.getElementById('input-nome').disabled  = true;
   document.querySelectorAll('.emoji-btn').forEach(b => b.disabled = true);
 }
 
-// ---- AVISO NOME PROIBIDO ----
 function mostrarAvisoNomeProibido() {
-  // Remover aviso anterior se existir
   const existente = document.getElementById('aviso-nome-proibido');
   if (existente) existente.remove();
-
   const aviso = document.createElement('div');
   aviso.id = 'aviso-nome-proibido';
-  aviso.style.cssText = `
-    background: rgba(255,60,90,0.15);
-    border: 2px solid var(--red);
-    border-radius: 10px;
-    padding: 0.8rem 1rem;
-    margin-top: 0.6rem;
-    color: var(--red);
-    font-size: 0.88rem;
-    font-weight: 700;
-    text-align: center;
-    animation: fadeUp 0.3s ease;
-  `;
-  aviso.innerHTML = `
-    🚫 <strong>Nome não permitido!</strong><br>
-    <span style="font-weight:400;font-size:0.82rem;">Por favor, escolha outro nome para continuar.</span>
-  `;
-
-  const campo = document.querySelector('.campo');
-  campo.parentNode.insertBefore(aviso, document.getElementById('btn-entrar'));
-
-  // Auto remover após 5 segundos
-  setTimeout(() => {
-    if (aviso.parentNode) aviso.remove();
-  }, 5000);
+  aviso.style.cssText = `background:rgba(255,60,90,.15);border:2px solid var(--red);border-radius:10px;padding:.8rem 1rem;margin-top:.6rem;color:var(--red);font-size:.88rem;font-weight:700;text-align:center;animation:fadeUp .3s ease;`;
+  aviso.innerHTML = `🚫 <strong>Nome não permitido!</strong><br><span style="font-weight:400;font-size:.82rem;">Por favor, escolha outro nome para continuar.</span>`;
+  document.getElementById('btn-entrar').before(aviso);
+  setTimeout(() => aviso.parentNode && aviso.remove(), 5000);
 }
 
-// ---- TOGGLE MODO PROFESSOR ----
 function toggleModoProf() {
   if (modoProfsDesbloqueado) {
-    // Já desbloqueado, apenas mostrar/esconder
-    const painel = document.getElementById('painel-prof');
-    painel.classList.toggle('oculto');
-    return;
+    document.getElementById('painel-prof').classList.toggle('oculto'); return;
   }
-
-  // Pedir senha
   const modal = document.getElementById('modal-senha-prof');
-  if (modal) {
-    modal.classList.remove('oculto');
-    document.getElementById('input-senha-prof').value = '';
-    document.getElementById('input-senha-prof').focus();
-    document.getElementById('erro-senha-prof').textContent = '';
-  }
+  if (modal) { modal.classList.remove('oculto'); document.getElementById('input-senha-prof').value = ''; document.getElementById('input-senha-prof').focus(); document.getElementById('erro-senha-prof').textContent = ''; }
 }
 
 function confirmarSenhaProf() {
   const senha = document.getElementById('input-senha-prof').value;
   if (senha === SENHA_PROFESSOR) {
-    modoProfsDesbloqueado = true;
-    fecharModalSenha();
-    const painel = document.getElementById('painel-prof');
-    painel.classList.remove('oculto');
+    modoProfsDesbloqueado = true; fecharModalSenha();
+    document.getElementById('painel-prof').classList.remove('oculto');
     document.querySelector('.btn-link').textContent = '👨‍🏫 Modo Professor ✅';
   } else {
-    const erroEl = document.getElementById('erro-senha-prof');
-    erroEl.textContent = '❌ Senha incorreta!';
+    const el = document.getElementById('erro-senha-prof');
+    el.textContent = '❌ Senha incorreta!';
     document.getElementById('input-senha-prof').style.borderColor = 'var(--red)';
-    setTimeout(() => {
-      erroEl.textContent = '';
-      document.getElementById('input-senha-prof').style.borderColor = '';
-    }, 2000);
+    setTimeout(() => { el.textContent = ''; document.getElementById('input-senha-prof').style.borderColor = ''; }, 2000);
   }
 }
 
 function fecharModalSenha() {
-  const modal = document.getElementById('modal-senha-prof');
-  if (modal) modal.classList.add('oculto');
+  document.getElementById('modal-senha-prof')?.classList.add('oculto');
 }
 
-// Confirmar senha com Enter
 document.addEventListener('DOMContentLoaded', () => {
-  const inputSenha = document.getElementById('input-senha-prof');
-  if (inputSenha) {
-    inputSenha.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') confirmarSenhaProf();
-      if (e.key === 'Escape') fecharModalSenha();
-    });
+  const input = document.getElementById('input-senha-prof');
+  if (input) {
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') confirmarSenhaProf(); if (e.key === 'Escape') fecharModalSenha(); });
   }
 });
 
-// ---- INICIAR JOGO ----
 function iniciarJogo() {
   if (!modoProfsDesbloqueado) return;
-  const nivel = document.getElementById('sel-nivel').value;
+  const nivel        = document.getElementById('sel-nivel').value;
   const totalRodadas = parseInt(document.getElementById('sel-rodadas').value);
-  socket.emit('iniciar_jogo', { nivel, totalRodadas });
+  const materia      = materiaSelecionada;
+  socket.emit('iniciar_jogo', { nivel, totalRodadas, materia });
 }
 
-// ---- PRÓXIMA PERGUNTA (professor) ----
 function proximaPerguntaProf() {
   if (!modoProfsDesbloqueado) return;
   const btn = document.getElementById('btn-proxima-pergunta');
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = '⏳ Aguardando...';
-  }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Aguardando...'; }
   socket.emit('proxima_pergunta');
 }
 
-// ---- RESETAR ----
-function resetarJogo() {
-  socket.emit('resetar_jogo');
-}
+function resetarJogo() { socket.emit('resetar_jogo'); }
 
-// ---- VOLTAR LOBBY ----
 function voltarLobby() {
   document.getElementById('btn-entrar').textContent = '🚀 Entrar no Jogo';
-  document.getElementById('btn-entrar').disabled = false;
-  document.getElementById('input-nome').disabled = false;
+  document.getElementById('btn-entrar').disabled    = false;
+  document.getElementById('input-nome').disabled    = false;
   document.querySelectorAll('.emoji-btn').forEach(b => b.disabled = false);
   mostrarTela('lobby');
 }
 
-// ---- MOSTRAR TELA ----
 function mostrarTela(nome) {
   document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
-  const mapa = { lobby: 'tela-lobby', jogo: 'tela-jogo', resultado: 'tela-resultado' };
+  const mapa = { lobby:'tela-lobby', jogo:'tela-jogo', resultado:'tela-resultado' };
   document.getElementById(mapa[nome])?.classList.add('ativa');
 }
 
-// ---- RENDERIZAR LOBBY ----
 function renderizarLobby(jogadores) {
   const lista = document.getElementById('lista-jogadores');
-  if (!jogadores || jogadores.length === 0) {
-    lista.innerHTML = '<p class="vazio">Aguardando jogadores...</p>';
-    return;
-  }
+  if (!jogadores?.length) { lista.innerHTML = '<p class="vazio">Aguardando jogadores...</p>'; return; }
   lista.innerHTML = jogadores.map((j, i) => `
-    <div class="jogador-item ${i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : ''}">
-      <span class="jogador-pos">#${i + 1}</span>
+    <div class="jogador-item ${['top1','top2','top3'][i]||''}">
+      <span class="jogador-pos">#${i+1}</span>
       <span class="jogador-emoji">${j.emoji}</span>
       <span class="jogador-nome">${escapeHTML(j.nome)}</span>
       <span class="jogador-pts">${j.pontos} pts</span>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ---- RENDERIZAR PERGUNTA ----
 function renderizarPergunta(pergunta, opcoes, tipo) {
-  const tipoNomes = {
-    multipla: '🔵 Múltipla Escolha',
-    corrigir: '🔴 Corrigir a Frase',
-    completar: '🟡 Completar',
-    interpretacao: '🟢 Interpretação'
-  };
-
+  const tipoNomes = { multipla:'🔵 Múltipla Escolha', corrigir:'🔴 Corrigir a Frase', completar:'🟡 Completar', interpretacao:'🟢 Interpretação' };
   document.getElementById('tipo-badge').textContent = tipoNomes[tipo] || '🔵 Múltipla Escolha';
   digitarTexto('texto-pergunta', pergunta);
-
-  const grid = document.getElementById('opcoes-grid');
-  grid.innerHTML = opcoes.map((op, i) => `
+  document.getElementById('opcoes-grid').innerHTML = opcoes.map((op, i) => `
     <button class="opcao-btn" onclick="responder(${i})">
       <span class="opcao-letra">${LETRAS[i]}</span>
       <span>${escapeHTML(op)}</span>
-    </button>
-  `).join('');
+    </button>`).join('');
 }
 
-// ---- EFEITO DIGITAÇÃO ----
-function digitarTexto(elementId, texto) {
-  const el = document.getElementById(elementId);
+function digitarTexto(id, texto) {
+  const el = document.getElementById(id);
   el.textContent = '';
   let i = 0;
   const vel = Math.max(15, Math.min(40, 1200 / texto.length));
-  const intervalo = setInterval(() => {
-    el.textContent += texto[i];
-    i++;
-    if (i >= texto.length) clearInterval(intervalo);
-  }, vel);
+  const itv = setInterval(() => { el.textContent += texto[i++]; if (i >= texto.length) clearInterval(itv); }, vel);
 }
 
-// ---- RESPONDER ----
 function responder(indice) {
   if (jaRespondeu) return;
   jaRespondeu = true;
-
-  const botoes = document.querySelectorAll('.opcao-btn');
-  botoes.forEach(b => b.disabled = true);
-  botoes[indice]?.classList.add('selecionada');
-
+  document.querySelectorAll('.opcao-btn').forEach(b => b.disabled = true);
+  document.querySelectorAll('.opcao-btn')[indice]?.classList.add('selecionada');
   socket.emit('responder', { resposta: indice });
 }
 
-// ---- TIMER ----
 function iniciarTimer(segundos) {
   pararTimer();
   segundosRestantes = segundos;
-  const CIRCUNFERENCIA = 327;
-
+  const CIRC = 327;
   const circle = document.getElementById('timer-circle');
   const numero = document.getElementById('timer-numero');
-
   circle.style.stroke = 'var(--neon1)';
-  numero.style.color = 'var(--text)';
-  numero.textContent = segundos;
+  numero.style.color  = 'var(--text)';
+  numero.textContent  = segundos;
   circle.style.strokeDashoffset = 0;
 
   timerLocal = setInterval(() => {
     segundosRestantes--;
     numero.textContent = segundosRestantes;
-
-    const progresso = (segundos - segundosRestantes) / segundos;
-    circle.style.strokeDashoffset = CIRCUNFERENCIA * progresso;
-
-    if (segundosRestantes <= 3) {
-      circle.style.stroke = 'var(--red)';
-      numero.style.color = 'var(--red)';
-      if (segundosRestantes > 0) tocarSom('tick');
-    } else if (segundosRestantes <= 5) {
-      circle.style.stroke = 'var(--neon3)';
-    }
-
-    if (segundosRestantes <= 0) {
-      pararTimer();
-      circle.style.strokeDashoffset = CIRCUNFERENCIA;
-    }
+    circle.style.strokeDashoffset = CIRC * ((segundos - segundosRestantes) / segundos);
+    if      (segundosRestantes <= 3) { circle.style.stroke = 'var(--red)'; numero.style.color = 'var(--red)'; if (segundosRestantes > 0) tocarSom('tick'); }
+    else if (segundosRestantes <= 5) { circle.style.stroke = 'var(--neon3)'; }
+    if (segundosRestantes <= 0) { pararTimer(); circle.style.strokeDashoffset = CIRC; }
   }, 1000);
 }
 
-function pararTimer() {
-  if (timerLocal) { clearInterval(timerLocal); timerLocal = null; }
-}
+function pararTimer() { if (timerLocal) { clearInterval(timerLocal); timerLocal = null; } }
 
-// ---- MOSTRAR FEEDBACK ----
 function mostrarFeedback(correta) {
   const overlay = document.getElementById('feedback-overlay');
-  const box = document.getElementById('feedback-box');
-  const icon = document.getElementById('feedback-icon');
-  const texto = document.getElementById('feedback-texto');
-  const pts = document.getElementById('feedback-pts');
-
-  overlay.classList.remove('oculto');
+  const box     = document.getElementById('feedback-box');
+  document.getElementById('feedback-overlay').classList.remove('oculto');
   box.className = 'feedback-box ' + (correta ? 'acerto' : 'erro');
-  icon.textContent = correta ? '✅' : '❌';
-  texto.textContent = correta ? 'Correto!' : 'Errou!';
-  pts.textContent = correta ? '+10 pontos' : '-5 pontos';
-
+  document.getElementById('feedback-icon').textContent  = correta ? '✅' : '❌';
+  document.getElementById('feedback-texto').textContent = correta ? 'Correto!' : 'Errou!';
+  document.getElementById('feedback-pts').textContent   = correta ? '+10 pontos' : '-5 pontos';
   setTimeout(esconderFeedback, 2000);
 }
 
-function esconderFeedback() {
-  document.getElementById('feedback-overlay').classList.add('oculto');
-}
+function esconderFeedback() { document.getElementById('feedback-overlay').classList.add('oculto'); }
 
-// ---- BADGE RAPIDEZ ----
 function mostrarBadgeRapido() {
   const badge = document.createElement('div');
   badge.className = 'badge-rapido';
-  badge.style.cssText = `
-    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-    z-index:300;background:linear-gradient(135deg,var(--neon3),#ff9100);
-    color:#000;font-family:'Orbitron',sans-serif;font-weight:900;
-    padding:1rem 2rem;border-radius:20px;font-size:1.2rem;
-    animation:popIn 0.3s ease, fadeOut 0.5s ease 1.5s forwards;
-    box-shadow:0 0 40px rgba(249,200,14,0.4);
-  `;
+  badge.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:300;background:linear-gradient(135deg,var(--neon3),#ff9100);color:#000;font-family:'Orbitron',sans-serif;font-weight:900;padding:1rem 2rem;border-radius:20px;font-size:1.2rem;animation:popIn .3s ease,fadeOut .5s ease 1.5s forwards;box-shadow:0 0 40px rgba(249,200,14,.4);`;
   badge.textContent = '⚡ Mais Rápido! +5 bônus!';
   document.body.appendChild(badge);
   setTimeout(() => badge.remove(), 2500);
 }
 
-// ---- RANKING LATERAL ----
 function renderizarRankingLateral(ranking) {
-  const lista = document.getElementById('ranking-lista');
-  lista.innerHTML = ranking.map((j, i) => `
-    <div class="rank-item ${i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : ''}">
+  document.getElementById('ranking-lista').innerHTML = ranking.map((j, i) => `
+    <div class="rank-item ${['top1','top2','top3'][i]||''}">
       <span class="rank-pos">${getMedal(i)}</span>
       <span class="rank-emoji">${j.emoji}</span>
       <span class="rank-nome">${escapeHTML(j.nome)}</span>
       <span class="rank-pts">${j.pontos}</span>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ---- RESULTADO FINAL ----
 function renderizarResultadoFinal(ranking) {
-  const podio = document.getElementById('podio');
-  const top3 = ranking.slice(0, 3);
-  const medalhas = ['🥇', '🥈', '🥉'];
-  const coroas = ['👑', '🌟', '⭐'];
+  const top3     = ranking.slice(0, 3);
+  const medalhas = ['🥇','🥈','🥉'];
+  const coroas   = ['👑','🌟','⭐'];
 
-  podio.innerHTML = top3.map((j, i) => `
-    <div class="podio-item" style="animation-delay:${i * 0.15}s">
+  document.getElementById('podio').innerHTML = top3.map((j, i) => `
+    <div class="podio-item" style="animation-delay:${i*.15}s">
       <span class="podio-coroa">${coroas[i]}</span>
       <span class="podio-emoji">${j.emoji}</span>
       <p class="podio-nome">${escapeHTML(j.nome)}</p>
       <p class="podio-pts">${j.pontos} pts</p>
       <span>${medalhas[i]}</span>
-    </div>
-  `).join('');
+    </div>`).join('');
 
-  const rankFinal = document.getElementById('ranking-final');
-  rankFinal.innerHTML = ranking.map((j, i) => `
+  document.getElementById('ranking-final').innerHTML = ranking.map((j, i) => `
     <div class="ranking-final-item">
-      <span class="rf-pos">${i + 1}º</span>
+      <span class="rf-pos">${i+1}º</span>
       <span class="rf-emoji">${j.emoji}</span>
       <span class="rf-nome">${escapeHTML(j.nome)}</span>
       <span class="rf-pts">${j.pontos} pts</span>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ---- MENSAGEM LOBBY ----
 function mostrarMsgLobby(msg) {
   const el = document.getElementById('msg-lobby');
   if (!el) return;
-  el.textContent = msg;
-  el.style.opacity = '1';
+  el.textContent = msg; el.style.opacity = '1';
   setTimeout(() => { el.style.opacity = '0'; }, 4000);
 }
 
-// ---- UTILITÁRIOS ----
-function getMedal(i) {
-  return ['🥇', '🥈', '🥉'][i] || `${i + 1}º`;
-}
+function getMedal(i) { return ['🥇','🥈','🥉'][i] || `${i+1}º`; }
 
 function escapeHTML(str) {
   return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
@@ -613,13 +466,11 @@ function pulsarErro(id) {
   setTimeout(() => { el.style.borderColor = ''; el.classList.remove('anim-shake'); }, 500);
 }
 
-// ---- ESTILO FADEOUT ----
 const style = document.createElement('style');
-style.textContent = `@keyframes fadeOut { to { opacity: 0; transform: translate(-50%,-50%) scale(0.8); } }`;
+style.textContent = `@keyframes fadeOut { to { opacity:0; transform:translate(-50%,-50%) scale(.8); } }`;
 document.head.appendChild(style);
 
 // ============================================================
-// INICIALIZAR
+// INIT
 // ============================================================
 inicializarEmojis();
-socket.on('connect', () => { meuId = socket.id; });

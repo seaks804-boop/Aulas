@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚔️ Batalha da Gramática</title>
+  <title>⚔️ Batalha do Saber</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -32,8 +32,8 @@
     <div class="lobby-bg"></div>
 
     <div class="logo-area">
-      <h1 class="logo">⚔️ Batalha da<br><span>Gramática</span></h1>
-      <p class="logo-sub">Multiplayer • Português • Diversão</p>
+      <h1 class="logo">⚔️ Batalha do<br><span>Saber</span></h1>
+      <p class="logo-sub">Multiplayer • Quiz • Diversão</p>
     </div>
 
     <div class="lobby-container">
@@ -62,7 +62,22 @@
         </div>
 
         <div id="painel-prof" class="painel-prof oculto">
-          <h3>⚙️ Configurações</h3>
+          <h3>⚙️ Configurações da Partida</h3>
+
+          <div class="campo">
+            <label>📚 Matéria</label>
+            <div class="materia-grid" id="materia-grid">
+              <button class="btn-materia selected" data-materia="portugues"   onclick="selecionarMateria(this)">📖 Português</button>
+              <button class="btn-materia"           data-materia="matematica" onclick="selecionarMateria(this)">🔢 Matemática</button>
+              <button class="btn-materia"           data-materia="geometria"  onclick="selecionarMateria(this)">📐 Geometria</button>
+              <button class="btn-materia"           data-materia="geografia"  onclick="selecionarMateria(this)">🌍 Geografia</button>
+              <button class="btn-materia"           data-materia="ciencias"   onclick="selecionarMateria(this)">🔬 Ciências</button>
+              <button class="btn-materia"           data-materia="historia"   onclick="selecionarMateria(this)">🏛️ História</button>
+              <button class="btn-materia"           data-materia="ingles"     onclick="selecionarMateria(this)">🇬🇧 Inglês</button>
+              <button class="btn-materia"           data-materia="aleatorio"  onclick="selecionarMateria(this)">🎲 Aleatório</button>
+            </div>
+          </div>
+
           <div class="campo">
             <label>Nível escolar</label>
             <select id="sel-nivel">
@@ -74,6 +89,7 @@
               <option value="9ano">9º Ano</option>
             </select>
           </div>
+
           <div class="campo">
             <label>Número de rodadas</label>
             <select id="sel-rodadas">
@@ -83,6 +99,7 @@
               <option value="20">20 rodadas</option>
             </select>
           </div>
+
           <button class="btn btn-prof" onclick="iniciarJogo()">▶️ Iniciar Jogo</button>
           <button class="btn btn-reset" onclick="resetarJogo()">🔄 Resetar</button>
         </div>
@@ -106,6 +123,7 @@
     <div class="game-header">
       <div class="info-jogo">
         <span id="nivel-badge" class="badge">6º Ano</span>
+        <span id="materia-badge" class="badge badge-materia">📖 Português</span>
         <span id="rodada-info" class="rodada-info">Rodada 1/10</span>
       </div>
       <div class="meu-placar">
@@ -146,7 +164,7 @@
       <!-- Opções de resposta -->
       <div class="opcoes-grid" id="opcoes-grid"></div>
 
-      <!-- Botão Próxima Pergunta (só para professor) -->
+      <!-- Botão Próxima Pergunta (só professor) -->
       <button
         id="btn-proxima-pergunta"
         class="btn btn-proxima"
@@ -156,7 +174,7 @@
         ⏭️ Próxima Pergunta
       </button>
 
-      <!-- Feedback (acertou/errou) -->
+      <!-- Feedback -->
       <div id="feedback-overlay" class="feedback-overlay oculto">
         <div class="feedback-box" id="feedback-box">
           <span class="feedback-icon" id="feedback-icon">✅</span>
